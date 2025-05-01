@@ -14,54 +14,45 @@
 
     <!-- Embedded CSS -->
     <style>
-<!--        body, html {-->
-<!--            height: 100%;-->
-<!--            margin: 0;-->
-<!--            background: linear-gradient(to right, rgb(38, 51, 61), rgb(50, 55, 65), rgb(33, 33, 78));-->
-<!--        }-->
-
-
-<!--        .chatbot-btn {-->
-<!--            position: fixed;-->
-<!--            bottom: 20px;-->
-<!--            right: 20px;-->
-<!--            background-color: #007bff;-->
-<!--            color: white;-->
-<!--            border: none;-->
-<!--            border-radius: 50%;-->
-<!--            padding: 15px 18px;-->
-<!--            font-size: 24px;-->
-<!--            box-shadow: 0 4px 8px rgba(0,0,0,0.2);-->
-<!--            z-index: 1000;-->
-<!--            cursor: pointer;-->
-<!--        }-->
-    @keyframes bounce {
-        0% {
-            transform: translateY(0);
+        @keyframes bounce {
+            0% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+            100% {
+                transform: translateY(0);
+            }
         }
-        50% {
-            transform: translateY(-10px);
-        }
-        100% {
-            transform: translateY(0);
-        }
-    }
 
-    .chatbot-btn {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 50%;
-        padding: 15px 18px;
-        font-size: 24px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        z-index: 1000;
-        cursor: pointer;
-        animation: bounce 2s ease-in-out infinite;
-    }
+        .chatbot-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            padding: 15px 18px;
+            font-size: 24px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1001;  /* Keep the button on top */
+            cursor: pointer;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        .blurred-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            display: none;
+            z-index: 999;
+        }
 
         .chat-popup {
             position: fixed;
@@ -74,9 +65,9 @@
             pointer-events: none;
             transition: transform 0.5s ease;
             transform-origin: bottom center;
-            background-color: #f8f9fa; /* Set the background color to white or any color you prefer */
-            border-radius: 10px; /* Optional: rounded corners for the popup */
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Optional: shadow for a better look */
+            background-color: #343a40;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
         .chat-popup.show {
@@ -84,8 +75,7 @@
             pointer-events: auto;
         }
 
-
-        .card {
+        .card-item {
             height: 100%;
             border-radius: 15px !important;
             background-color: rgba(0, 0, 0, 0.4) !important;
@@ -111,13 +101,19 @@
 
         .type_msg,
         .send_btn {
-            background-color: rgba(0,0,0,0.3) !important;
-            color: white !important;
+            background-color: rgba(211,211,211,0.8) !important;
+            color: black !important;
             border: none !important;
         }
 
+        .type_msg:focus,
+        .send_btn:focus {
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
         .send_btn {
-            border-radius: 0 15px 15px 0 !important;
+            border-radius: 0 5px 5px 0 !important;
         }
 
         .user_img,
@@ -199,9 +195,12 @@
     <img src="https://cdn-icons-png.flaticon.com/512/3774/3774299.png" alt="chat-icon" width="50" height="50">
 </button>
 
+<!-- Blurred Background -->
+<div id="blurredBackground" class="blurred-background"></div>
+
 <!-- Chatbot Popup -->
 <div class="chat-popup" id="chatPopup">
-    <div class="card">
+    <div class="card-item">
         <div class="card-header msg_head">
             <div class="d-flex bd-highlight">
                 <div class="img_cont">
@@ -216,7 +215,7 @@
         <div id="messageFormeight" class="card-body msg_card_body"></div>
         <div class="card-footer">
             <form id="messageArea" class="input-group">
-                <input type="text" id="text" name="msg" placeholder="Type your message..." autocomplete="off" class="form-control type_msg" required/>
+                <input type="text" id="text" name="msg" placeholder="Type your problem..." autocomplete="off" class="form-control type_msg" required/>
                 <div class="input-group-append">
                     <button type="submit" id="send" class="input-group-text send_btn"><i class="fas fa-location-arrow"></i></button>
                 </div>
@@ -228,63 +227,64 @@
 <!-- JS Script -->
 <script>
     $(document).ready(function () {
-    // Toggle chatbot
-    $('#chatbotToggleBtn').click(function () {
-        $('#chatPopup').toggleClass('show');
+        // Toggle chatbot
+        $('#chatbotToggleBtn').click(function () {
+            $('#chatPopup').toggleClass('show');
+            $('#blurredBackground').toggle(); // Toggle background blur
 
-        // Stop the bounce animation when the popup is opened
-        if ($('#chatPopup').hasClass('show')) {
-            $('#chatbotToggleBtn').css('animation-play-state', 'paused');
-        } else {
-            $('#chatbotToggleBtn').css('animation-play-state', 'running');
-        }
-    });
-
-    // Function to scroll to the bottom of the chat
-    function scrollToBottom() {
-        const messageContainer = $('#messageFormeight');
-        messageContainer.scrollTop(messageContainer[0].scrollHeight);
-    }
-
-    // Handle message send
-    $('#messageArea').on('submit', function (event) {
-        const date = new Date();
-        const str_time = `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
-        const rawText = $('#text').val();
-
-        // User message
-        const userHtml = `
-            <div class="d-flex justify-content-end mb-4">
-                <div class="msg_cotainer_send">${rawText}<span class="msg_time_send">${str_time}</span></div>
-                <div class="img_cont_msg"><img src="https://i.ibb.co/d5b84Xw/Untitled-design.png" class="rounded-circle user_img_msg"></div>
-            </div>`;
-        $('#text').val('');
-        $('#messageFormeight').append(userHtml);
-
-        // Scroll to the bottom after user message
-        scrollToBottom();
-
-        $.ajax({
-            data: { msg: rawText },
-            type: 'POST',
-            url: '/get',
-        }).done(function (data) {
-            // Bot response
-            const botHtml = `
-                <div class="d-flex justify-content-start mb-4">
-                    <div class="img_cont_msg"><img src="https://cdn-icons-png.flaticon.com/512/387/387569.png" class="rounded-circle user_img_msg"></div>
-                    <div class="msg_cotainer">${data}<span class="msg_time">${str_time}</span></div>
-                </div>`;
-            $('#messageFormeight').append($.parseHTML(botHtml));
-
-            // Scroll to the bottom after bot response
-            scrollToBottom();
+            // Stop the bounce animation when the popup is opened
+            if ($('#chatPopup').hasClass('show')) {
+                $('#chatbotToggleBtn').css('animation-play-state', 'paused');
+            } else {
+                $('#chatbotToggleBtn').css('animation-play-state', 'running');
+            }
         });
 
-        event.preventDefault();
-    });
-});
+        // Function to scroll to the bottom of the chat
+        function scrollToBottom() {
+            const messageContainer = $('#messageFormeight');
+            messageContainer.scrollTop(messageContainer[0].scrollHeight);
+        }
 
+        // Handle message send
+        $('#messageArea').on('submit', function (event) {
+            const date = new Date();
+            const str_time = `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+            const rawText = $('#text').val();
+
+            // User message
+            const userHtml = `
+                <div class="d-flex justify-content-end mb-4">
+                    <div class="msg_cotainer_send">${rawText}<span class="msg_time_send">${str_time}</span></div>
+                    <div class="img_cont_msg"><img src="https://i.ibb.co/d5b84Xw/Untitled-design.png" class="rounded-circle user_img_msg"></div>
+                </div>`;
+            $('#text').val('');
+            $('#messageFormeight').append(userHtml);
+
+            // Scroll to the bottom after user message
+            scrollToBottom();
+
+            $.ajax({
+                data: { msg: rawText },
+                type: 'POST',
+                url: '/chat',
+            }).done(function (data) {
+                console.log(data)
+                const botMessage = data.answer; // Adjust this line based on your response structure
+                const botHtml = `
+                    <div class="d-flex justify-content-start mb-4">
+                        <div class="img_cont_msg"><img src="https://cdn-icons-png.flaticon.com/512/387/387569.png" class="rounded-circle user_img_msg"></div>
+                        <div class="msg_cotainer">${botMessage}<span class="msg_time">${str_time}</span></div>
+                    </div>`;
+                $('#messageFormeight').append($.parseHTML(botHtml));
+
+                // Scroll to the bottom after bot response
+                scrollToBottom();
+            });
+
+            event.preventDefault();
+        });
+    });
 </script>
 
 </body>

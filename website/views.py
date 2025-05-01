@@ -6,6 +6,19 @@ from website.forms import SignUpForm, AddRecordForm
 from .models import Record
 
 
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from src.helper import download_hugging_face_embeddings
+from langchain_pinecone import PineconeVectorStore
+from src.prompt import system_prompt
+from src.helper import load_pdf_file, text_split
+from langchain_core.prompts import ChatPromptTemplate
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
+
+
 # Create your views here.
 def home(request):
     records = Record.objects.all()
@@ -102,3 +115,82 @@ def update_record(request, pk):
     else:
         messages.success(request, "You Must Be Logged In...")
         return redirect('home')
+
+
+#   STARTING CHATBOT IMPLEMENTATION PART.
+
+load_dotenv()
+
+PINECONE_API_KEY = os.environ.get('PINECONE_API_KEY')
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+
+
+os.environ["PINECONE_API_KEY"] = PINECONE_API_KEY
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY
+
+# Configure environment variables
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+# Load embeddings and initialize the Pinecone vector store
+embeddings = download_hugging_face_embeddings()
+index_name = "medicalbot"
+
+# Set up Pinecone vector store
+docsearch = PineconeVectorStore.from_existing_index(
+    index_name=index_name,
+    embedding=embeddings
+)
+retriever = docsearch.as_retriever(search_type="similarity", search_kwargs={"k": 3})
+
+# Initialize the Gemini model
+model = genai.GenerativeModel(model_name="gemini-1.5-pro-latest")
+
+
+def get_gemini_response(question, context):
+    prompt = system_prompt.format(context=context)
+    full_prompt = f"{prompt}\n\nQuestion: {question}"
+    response = model.generate_content(full_prompt)
+    return response.text
+
+
+# Index view (renders the chatbot interface)
+def index(request):
+    return render(request, 'chatbot.html')
+
+
+@csrf_exempt
+def chat(request):
+    if request.method == "POST":
+        msg = request.POST.get("msg")
+        context_docs = retriever.invoke(msg)
+        context = "\n".join([doc.page_content for doc in context_docs])
+        answer = get_gemini_response(msg, context)
+        print(answer)
+        return JsonResponse({"answer": answer})
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+# @csrf_exempt
+# def chat(request):
+#     try:
+#         if request.method == "POST":
+#             msg = request.POST.get("msg")
+#             if not msg:
+#                 return JsonResponse({"answer": "No message provided"}, status=400)
+#
+#             # Assuming retriever.invoke can raise exceptions
+#             context_docs = retriever.invoke(msg)
+#             context = "\n".join([doc.page_content for doc in context_docs])
+#
+#             # Assuming get_gemini_response can raise exceptions
+#             answer = get_gemini_response(msg, context)
+#             print(answer)
+#             return JsonResponse({"answer": answer})
+#
+#         return JsonResponse({"answer": "Invalid request method. Only POST is allowed."}, status=405)
+#
+#     except Exception as e:
+#         # If an exception occurs, return the error message
+#         return JsonResponse({"answer": str(e)}, status=500)
