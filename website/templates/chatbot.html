@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Medical Chatbot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Bootstrap & Font Awesome -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css">
+
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+    <!-- Embedded CSS -->
+    <style>
+<!--        body, html {-->
+<!--            height: 100%;-->
+<!--            margin: 0;-->
+<!--            background: linear-gradient(to right, rgb(38, 51, 61), rgb(50, 55, 65), rgb(33, 33, 78));-->
+<!--        }-->
+
+
+<!--        .chatbot-btn {-->
+<!--            position: fixed;-->
+<!--            bottom: 20px;-->
+<!--            right: 20px;-->
+<!--            background-color: #007bff;-->
+<!--            color: white;-->
+<!--            border: none;-->
+<!--            border-radius: 50%;-->
+<!--            padding: 15px 18px;-->
+<!--            font-size: 24px;-->
+<!--            box-shadow: 0 4px 8px rgba(0,0,0,0.2);-->
+<!--            z-index: 1000;-->
+<!--            cursor: pointer;-->
+<!--        }-->
+    @keyframes bounce {
+        0% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-10px);
+        }
+        100% {
+            transform: translateY(0);
+        }
+    }
+
+    .chatbot-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        padding: 15px 18px;
+        font-size: 24px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        cursor: pointer;
+        animation: bounce 2s ease-in-out infinite;
+    }
+
+        .chat-popup {
+            position: fixed;
+            bottom: 110px;
+            right: 20px;
+            width: 350px;
+            max-height: 600px;
+            z-index: 1000;
+            transform: rotateX(90deg);
+            pointer-events: none;
+            transition: transform 0.5s ease;
+            transform-origin: bottom center;
+            background-color: #f8f9fa; /* Set the background color to white or any color you prefer */
+            border-radius: 10px; /* Optional: rounded corners for the popup */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Optional: shadow for a better look */
+        }
+
+        .chat-popup.show {
+            transform: rotateX(0);
+            pointer-events: auto;
+        }
+
+
+        .card {
+            height: 100%;
+            border-radius: 15px !important;
+            background-color: rgba(0, 0, 0, 0.4) !important;
+        }
+
+        .msg_card_body {
+            overflow-y: auto;
+            height: 400px;
+        }
+
+        .card-header,
+        .card-footer {
+            border: 0 !important;
+        }
+
+        .card-header {
+            border-radius: 15px 15px 0 0 !important;
+        }
+
+        .card-footer {
+            border-radius: 0 0 15px 15px !important;
+        }
+
+        .type_msg,
+        .send_btn {
+            background-color: rgba(0,0,0,0.3) !important;
+            color: white !important;
+            border: none !important;
+        }
+
+        .send_btn {
+            border-radius: 0 15px 15px 0 !important;
+        }
+
+        .user_img,
+        .user_img_msg {
+            height: 40px;
+            width: 40px;
+            border: 1.5px solid #f5f6fa;
+        }
+
+        .user_img {
+            height: 70px;
+            width: 70px;
+        }
+
+        .online_icon {
+            position: absolute;
+            height: 15px;
+            width: 15px;
+            background-color: #4cd137;
+            border-radius: 50%;
+            bottom: 0.2em;
+            right: 0.4em;
+            border: 1.5px solid white;
+        }
+
+        .user_info {
+            margin-left: 15px;
+        }
+
+        .user_info span {
+            font-size: 20px;
+            color: white;
+        }
+
+        .user_info p {
+            font-size: 10px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .msg_cotainer,
+        .msg_cotainer_send {
+            border-radius: 25px;
+            padding: 10px;
+            position: relative;
+            max-width: 75%;
+        }
+
+        .msg_cotainer {
+            background-color: rgb(82, 172, 255);
+            margin-left: 10px;
+        }
+
+        .msg_cotainer_send {
+            background-color: #58cc71;
+            margin-right: 10px;
+        }
+
+        .msg_time,
+        .msg_time_send {
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+            position: absolute;
+            bottom: -15px;
+        }
+
+        .msg_time {
+            left: 0;
+        }
+
+        .msg_time_send {
+            right: 0;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Floating Button -->
+<button id="chatbotToggleBtn" class="chatbot-btn">
+    <img src="https://cdn-icons-png.flaticon.com/512/3774/3774299.png" alt="chat-icon" width="50" height="50">
+</button>
+
+<!-- Chatbot Popup -->
+<div class="chat-popup" id="chatPopup">
+    <div class="card">
+        <div class="card-header msg_head">
+            <div class="d-flex bd-highlight">
+                <div class="img_cont">
+                    <img src="https://cdn-icons-png.flaticon.com/512/387/387569.png" class="rounded-circle user_img">
+                </div>
+                <div class="user_info">
+                    <span>AskDoc Chatbot</span>
+                    <p>Ask me anything!</p>
+                </div>
+            </div>
+        </div>
+        <div id="messageFormeight" class="card-body msg_card_body"></div>
+        <div class="card-footer">
+            <form id="messageArea" class="input-group">
+                <input type="text" id="text" name="msg" placeholder="Type your message..." autocomplete="off" class="form-control type_msg" required/>
+                <div class="input-group-append">
+                    <button type="submit" id="send" class="input-group-text send_btn"><i class="fas fa-location-arrow"></i></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- JS Script -->
+<script>
+    $(document).ready(function () {
+    // Toggle chatbot
+    $('#chatbotToggleBtn').click(function () {
+        $('#chatPopup').toggleClass('show');
+
+        // Stop the bounce animation when the popup is opened
+        if ($('#chatPopup').hasClass('show')) {
+            $('#chatbotToggleBtn').css('animation-play-state', 'paused');
+        } else {
+            $('#chatbotToggleBtn').css('animation-play-state', 'running');
+        }
+    });
+
+    // Function to scroll to the bottom of the chat
+    function scrollToBottom() {
+        const messageContainer = $('#messageFormeight');
+        messageContainer.scrollTop(messageContainer[0].scrollHeight);
+    }
+
+    // Handle message send
+    $('#messageArea').on('submit', function (event) {
+        const date = new Date();
+        const str_time = `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+        const rawText = $('#text').val();
+
+        // User message
+        const userHtml = `
+            <div class="d-flex justify-content-end mb-4">
+                <div class="msg_cotainer_send">${rawText}<span class="msg_time_send">${str_time}</span></div>
+                <div class="img_cont_msg"><img src="https://i.ibb.co/d5b84Xw/Untitled-design.png" class="rounded-circle user_img_msg"></div>
+            </div>`;
+        $('#text').val('');
+        $('#messageFormeight').append(userHtml);
+
+        // Scroll to the bottom after user message
+        scrollToBottom();
+
+        $.ajax({
+            data: { msg: rawText },
+            type: 'POST',
+            url: '/get',
+        }).done(function (data) {
+            // Bot response
+            const botHtml = `
+                <div class="d-flex justify-content-start mb-4">
+                    <div class="img_cont_msg"><img src="https://cdn-icons-png.flaticon.com/512/387/387569.png" class="rounded-circle user_img_msg"></div>
+                    <div class="msg_cotainer">${data}<span class="msg_time">${str_time}</span></div>
+                </div>`;
+            $('#messageFormeight').append($.parseHTML(botHtml));
+
+            // Scroll to the bottom after bot response
+            scrollToBottom();
+        });
+
+        event.preventDefault();
+    });
+});
+
+</script>
+
+</body>
+</html>
